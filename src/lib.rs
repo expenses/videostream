@@ -1,16 +1,16 @@
 //! A rust library that provided a simple iterator around video files.
 //!
 //! Requires [ffmpeg] to be installed.
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! To read the first five frames of a video and write them to files is just:
-//! 
+//!
 //! ```no_run
 //! extern crate videostream;
 //!
 //! use videostream::VideoStream;
-//! 
+//!
 //! fn main() {
 //!     let mut stream = VideoStream::new("file.mp4").unwrap();
 //!
@@ -20,11 +20,11 @@
 //!     }
 //! }
 //! ```
-//! 
+//!
 //! [ffmpeg]: https://ffmpeg.org
 
-extern crate image;
 extern crate ffmpeg;
+extern crate image;
 
 use std::path::Path;
 
@@ -35,12 +35,12 @@ use ffmpeg::media::Type;
 use ffmpeg::format::context::Input;
 use ffmpeg::format::context::input::PacketIter;
 use ffmpeg::software::converter;
-use image::{RgbImage, RgbaImage, GrayImage};
+use image::{GrayImage, RgbImage, RgbaImage};
 
 #[derive(Debug)]
 pub enum Error {
     Static(&'static str),
-    Ffmpeg(ffmpeg::Error)
+    Ffmpeg(ffmpeg::Error),
 }
 
 impl From<ffmpeg::Error> for Error {
@@ -59,12 +59,12 @@ impl From<&'static str> for Error {
 pub struct VideoStream {
     input: Input,
     stream: usize,
-    decoder: Decoder
+    decoder: Decoder,
 }
 
 impl VideoStream {
     /// Create a new videostream from a path (can be a file or a url).
-    /// 
+    ///
     /// Returns an error if ffmpeg fails to initialise or a stream cannot be found in the input.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         ffmpeg::init()?;
@@ -72,12 +72,17 @@ impl VideoStream {
         let input = ffmpeg::format::input(&path)?;
 
         let (stream, decoder) = {
-            let stream = input.streams().best(Type::Video).ok_or("Failed to get stream")?;
+            let stream = input
+                .streams()
+                .best(Type::Video)
+                .ok_or("Failed to get stream")?;
             (stream.index(), stream.codec().decoder().video()?)
         };
 
         Ok(Self {
-            input, stream, decoder
+            input,
+            stream,
+            decoder,
         })
     }
 
@@ -111,11 +116,11 @@ impl<'a> Iterator for Frames<'a> {
     type Item = Frame;
 
     /// Return the next frame in the video.
-    /// 
+    ///
     /// Stops and `eprintln`s an error if one occurred in decoding.
     fn next(&mut self) -> Option<Self::Item> {
         match self.packets.next() {
-            Some((stream, packet)) => if stream.index() == self.stream {     
+            Some((stream, packet)) => if stream.index() == self.stream {
                 let mut output = InnerFrame::empty();
 
                 match self.decoder.decode(&packet, &mut output) {
@@ -132,21 +137,19 @@ impl<'a> Iterator for Frames<'a> {
             } else {
                 self.next()
             },
-            None => None
+            None => None,
         }
     }
 }
 
 /// A frame in the video, wrapping around a ffmpeg frame.
 pub struct Frame {
-    inner: InnerFrame
+    inner: InnerFrame,
 }
 
 impl Frame {
     fn new(inner: InnerFrame) -> Self {
-        Self {
-            inner
-        }
+        Self { inner }
     }
 
     /// Get the width of the frame.
@@ -162,19 +165,22 @@ impl Frame {
     /// Convert the frame to a rgba image.
     pub fn as_rgba(&self) -> Result<RgbaImage, Error> {
         let vec = self.as_vec(4, PixelFormat::RGBA)?;
-        RgbaImage::from_raw(self.width(), self.height(), vec).ok_or_else(|| "Failed to convert image".into())
+        RgbaImage::from_raw(self.width(), self.height(), vec)
+            .ok_or_else(|| "Failed to convert image".into())
     }
- 
+
     /// Convert the frame to a rgb image.
     pub fn as_rgb(&self) -> Result<RgbImage, Error> {
         let vec = self.as_vec(3, PixelFormat::RGB24)?;
-        RgbImage::from_raw(self.width(), self.height(), vec).ok_or_else(|| "Failed to convert image".into())
+        RgbImage::from_raw(self.width(), self.height(), vec)
+            .ok_or_else(|| "Failed to convert image".into())
     }
 
     /// Convert the frame to a luma (greyscale) image.
     pub fn as_luma(&self) -> Result<GrayImage, Error> {
         let vec = self.as_vec(1, PixelFormat::GRAY8)?;
-        GrayImage::from_raw(self.width(), self.height(), vec).ok_or_else(|| "Failed to convert image".into())
+        GrayImage::from_raw(self.width(), self.height(), vec)
+            .ok_or_else(|| "Failed to convert image".into())
     }
 
     fn convert(&self, format: PixelFormat) -> Result<InnerFrame, Error> {
@@ -187,9 +193,9 @@ impl Frame {
     }
 
     /// Convert the frame to a vec of channels with a given pixel format.
-    /// 
+    ///
     /// For example, to convert to rgb you would use:
-    /// 
+    ///
     /// ```text
     /// frame.as_vec(3, PixelFormat::RGB24)
     /// ```
@@ -203,14 +209,14 @@ impl Frame {
         // If the stride and width are equal, just convert to a vec
         if stride == width {
             Ok(output.data(index).to_vec())
-        // If they aren't (because the data has some garbage at the end of each line), skip over the garbage
+        // If they aren't, because the data has some garbage at the end of each line, skip over it
         } else {
             let mut offset = 0;
             let mut vec = Vec::with_capacity((self.width() * self.height() * channels) as usize);
             let data = output.data(index);
 
             while offset < data.len() {
-                vec.extend_from_slice(&data[offset .. offset + width]);
+                vec.extend_from_slice(&data[offset..offset + width]);
                 offset += stride;
             }
 
