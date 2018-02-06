@@ -52,12 +52,21 @@ impl VideoStream {
         })
     }
 
-    pub fn frames(&mut self) -> Frames {
+    pub fn iter(&mut self) -> Frames {
         Frames {
             packets: self.input.packets(),
             stream: self.stream,
             decoder: &mut self.decoder,
         }
+    }
+}
+
+impl<'a> IntoIterator for &'a mut VideoStream {
+    type Item = Frame;
+    type IntoIter = Frames<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -166,7 +175,7 @@ impl Frame {
 #[test]
 fn remote_url() {
     let url = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Aldrin_Apollo_11_original.jpg/596px-Aldrin_Apollo_11_original.jpg";
-    let frame = VideoStream::new(url).unwrap().frames().next().unwrap();
+    let frame = VideoStream::new(url).unwrap().iter().next().unwrap();
 
     frame.as_rgb().unwrap();
     frame.as_rgba().unwrap();

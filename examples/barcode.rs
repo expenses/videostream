@@ -6,7 +6,7 @@ fn main() {
     let mut stream = videostream::VideoStream::new(&path).unwrap();
     let mut colours = Vec::new();
 
-    for (i, mut frame) in stream.frames().enumerate() {
+    for (i, mut frame) in stream.iter().enumerate() {
         println!("{}", i);
 
         let image = frame.as_rgb().unwrap();

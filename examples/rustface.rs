@@ -12,7 +12,7 @@ fn main() {
     detector.set_pyramid_scale_factor(0.8);
     detector.set_slide_window_step(4, 4);
 
-    for (i, mut frame) in stream.frames().enumerate() {
+    for (i, mut frame) in stream.iter().enumerate() {
         println!("{}", i);
 
         let luma = frame.as_luma().unwrap();
