@@ -6,7 +6,6 @@ authors = ["Ashley <expenses@airmail.cc>"]
 [dependencies]
 image = "*"
 ffmpeg = {git = "https://github.com/meh/rust-ffmpeg"}
-rayon = "*"
 
 [dev-dependencies]
 rustface = "*"

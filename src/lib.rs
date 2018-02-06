@@ -1,6 +1,5 @@
 extern crate image;
 extern crate ffmpeg;
-extern crate rayon;
 
 use std::path::Path;
 
